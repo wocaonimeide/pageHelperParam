@@ -30,7 +30,8 @@ import com.github.pagehelper.PageHelper;
  */
 public class PageHelpProxy<T> implements InvocationHandler, Serializable {
 
-	private Logger logger = LoggerFactory.getLogger(getClass());
+    private static final long serialVersionUID = -2725267829120542073L;
+    private Logger logger = LoggerFactory.getLogger(getClass());
 
 	private final Object object;
 
