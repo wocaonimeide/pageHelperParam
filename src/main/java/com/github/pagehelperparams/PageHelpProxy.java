@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.ibatis.reflection.MetaObject;
+import org.apache.ibatis.session.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -38,9 +40,12 @@ public class PageHelpProxy<T> implements InvocationHandler, Serializable {
 
 	private Map<Method, ParamDesc[]> paramDescMap = new ConcurrentHashMap<>();
 
-	public PageHelpProxy(Object object, PageHelpProperties properties) {
+	private Configuration configuration;
+
+	public PageHelpProxy(Object object, PageHelpProperties properties,Configuration configuration) {
 		this.object = object;
 		this.properties = properties;
+		this.configuration=configuration;
 		Method[] oldMes = object.getClass().getDeclaredMethods();
 		for (Method method : oldMes) {
 			StringBuilder builder = new StringBuilder("");
@@ -107,7 +112,8 @@ public class PageHelpProxy<T> implements InvocationHandler, Serializable {
 	/**
 	 * 获取参数中的pageNo
 	 * 
-	 * @param args
+	 * @param method
+	 * @param pageNames
 	 * @return
 	 */
 	private ParamDesc pageInfo(Method method, List<String> pageNames) {
@@ -162,15 +168,21 @@ public class PageHelpProxy<T> implements InvocationHandler, Serializable {
 		return desc;
 	}
 
+	/**
+	 * 获取分页参数值
+	 * @param desc
+	 * @param args
+	 * @return
+	 * @throws Exception
+	 */
 	private Integer pageValue(ParamDesc desc, Object[] args) throws Exception {
 		if (desc.getFieldOrParam()) {
 			// 说明是字段内部
 			Integer index = desc.getParaIndex();
 			String fieldName = desc.getFieldName();
 			Object object = args[index];
-			Field field = object.getClass().getDeclaredField(fieldName);
-			field.setAccessible(true);
-			return Integer.valueOf(field.get(object).toString());
+			MetaObject metaObject=configuration.newMetaObject(object);
+			return Integer.valueOf(metaObject.getValue(fieldName).toString());
 		} else {
 			// 说明是参数上
 			Integer index = desc.getParaIndex();

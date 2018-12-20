@@ -2,6 +2,7 @@ package com.github.pagehelperparams;
 
 import java.lang.reflect.Proxy;
 
+import org.apache.ibatis.session.Configuration;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.core.annotation.AnnotationUtils;
@@ -18,8 +19,11 @@ public class PageHelperBeanProcessPost implements BeanPostProcessor {
 
 	private PageHelpProperties properties;
 
-	public PageHelperBeanProcessPost(PageHelpProperties properties) {
+	private Configuration configuration;
+
+	public PageHelperBeanProcessPost(PageHelpProperties properties,Configuration configuration) {
 		this.properties = properties;
+		this.configuration=configuration;
 	}
 
 	@Override
@@ -34,7 +38,7 @@ public class PageHelperBeanProcessPost implements BeanPostProcessor {
 		Class class1 = bean.getClass();
 		if (AnnotationUtils.isAnnotationDeclaredLocally(Service.class, class1)) {
 			return Proxy.newProxyInstance(class1.getClassLoader(), class1.getInterfaces(),
-					new PageHelpProxy<>(bean, this.properties));
+					new PageHelpProxy<>(bean, this.properties,this.configuration));
 		}
 		return bean;
 	}

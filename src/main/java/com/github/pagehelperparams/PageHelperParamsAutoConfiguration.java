@@ -28,9 +28,9 @@ public class PageHelperParamsAutoConfiguration {
 	private PageHelpProperties properties;
 
 	@Bean
-	public PageHelperBeanProcessPost pageHelperBeanProcessPost() {
+	public PageHelperBeanProcessPost pageHelperBeanProcessPost(SqlSessionFactory factory) {
 		Assert.notNull(properties, PageHelpProperties.class.getName() + "must not be null");
-		PageHelperBeanProcessPost beanProcessPost = new PageHelperBeanProcessPost(properties);
+		PageHelperBeanProcessPost beanProcessPost = new PageHelperBeanProcessPost(properties, factory.getConfiguration());
 		return beanProcessPost;
 	}
 
