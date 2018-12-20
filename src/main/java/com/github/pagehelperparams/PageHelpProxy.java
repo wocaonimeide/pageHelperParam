@@ -88,15 +88,16 @@ public class PageHelpProxy<T> implements InvocationHandler, Serializable {
 				try {
 					pageNo = pageValue(noDesc, args);
 					pageSize = pageValue(sizeDesc, args);
-				} catch (Exception e) {
-					// TODO: handle exception
-					if (logger.isErrorEnabled()) {
-						logger.error("生成分页参数 error,使用默认分页数据", e);
-					}
-					pageNo = properties.getDefaultPageNo();
-					pageSize = properties.getDefaultPageSize();
+                    if (pageNo != null && null!=pageSize) {
+                        if (pageNo>=0 && pageSize>=0){
+                            PageHelper.startPage(pageNo, pageSize);
+                        }else {
+                            PageHelper.startPage(properties.getDefaultPageNo(),properties.getDefaultPageSize());
+                        }
+                    }
+                } catch (Exception e) {
+					// TODO: do noting
 				}
-				PageHelper.startPage(pageNo, pageSize);
 				return method.invoke(object, args);
 			} else {
 				return method.invoke(object, args);
