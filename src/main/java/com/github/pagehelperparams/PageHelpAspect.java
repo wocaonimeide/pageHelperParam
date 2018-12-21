@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,88 +27,78 @@ import com.github.pagehelper.PageHelper;
  * 
  * @author huangYu
  * @version 1.0
+ * @since 1.8+
  * @createTime 2018年12月18日 下午2:34:46
  */
-public class PageHelpProxy<T> implements InvocationHandler, Serializable {
+public class PageHelpAspect implements Serializable {
 
     private static final long serialVersionUID = -2725267829120542073L;
     private Logger logger = LoggerFactory.getLogger(getClass());
-
-	private final Object object;
 
 	private PageHelpProperties properties;
 
 	private Map<Method, String> sMap = new HashMap<Method, String>();
 
-	private Map<Method, ParamDesc[]> paramDescMap = new ConcurrentHashMap<>();
+	private Map<Method, ParamDesc[]> paramDescMap = new ConcurrentHashMap<Method, ParamDesc[]>();
+
+	private List<Method> notHasPageInfoMethods=new ArrayList<Method>(20);
 
 	private Configuration configuration;
 
-	public PageHelpProxy(Object object, PageHelpProperties properties,Configuration configuration) {
-		this.object = object;
+	public PageHelpAspect(Object object,PageHelpProperties properties,Configuration configuration) {
 		this.properties = properties;
 		this.configuration=configuration;
-		Method[] oldMes = object.getClass().getDeclaredMethods();
-		for (Method method : oldMes) {
-			StringBuilder builder = new StringBuilder("");
-			Parameter[] parameters = method.getParameters();
-			for (Parameter parameter : parameters) {
-				builder.append(parameter.getType().getName());
+		Method [] methods=object.getClass().getDeclaredMethods();
+		for (Method method : methods) {
+			int paramCount=method.getParameterCount();
+			if (paramCount == 0){
+				notHasPageInfoMethods.add(method);
 			}
-			this.sMap.put(method, builder.toString());
 		}
 	}
 
-	@Override
-	public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-		try {
-			Integer pageNo = null;
-			Integer pageSize = null;
-			if (logger.isDebugEnabled()) {
-				logger.debug("开始查找pageNo和pageSize的参数信息");
-			}
-			ParamDesc[] descs = paramDescMap.get(method);
-			ParamDesc noDesc = null;
-			ParamDesc sizeDesc = null;
-			if (null == descs) {
-				noDesc = pageInfo(method, properties.getPageNoParams());
-				sizeDesc = pageInfo(method, properties.getPageSizeParams());
-				if (null != noDesc && null != sizeDesc) {
-					ParamDesc[] descs2 = new ParamDesc[2];
-					descs2[0] = noDesc;
-					descs2[1] = sizeDesc;
-					paramDescMap.put(method, descs2);
-				}
-			} else {
-				noDesc = descs[0];
-				sizeDesc = descs[1];
-			}
+	public void setPageInfo( Method method, Object[] args) {
+		if (notHasPageInfoMethods.contains(method)) {
+			return;
+		}
+		Integer pageNo = null;
+		Integer pageSize = null;
+		if (logger.isDebugEnabled()) {
+			logger.debug("开始查找pageNo和pageSize的参数信息");
+		}
+		ParamDesc[] descs = paramDescMap.get(method);
+		ParamDesc noDesc = null;
+		ParamDesc sizeDesc = null;
+		if (null == descs) {
+			noDesc = pageInfo(method, properties.getPageNoParams());
+			sizeDesc = pageInfo(method, properties.getPageSizeParams());
 			if (null != noDesc && null != sizeDesc) {
-				if (logger.isDebugEnabled()) {
-					logger.debug("成功查找到了参数信息");
+				ParamDesc[] descs2 = new ParamDesc[2];
+				descs2[0] = noDesc;
+				descs2[1] = sizeDesc;
+				paramDescMap.put(method, descs2);
+			}else {
+				return;
+			}
+		} else {
+			noDesc = descs[0];
+			sizeDesc = descs[1];
+		}
+		if (logger.isDebugEnabled()) {
+			logger.debug("成功查找到了参数信息");
+		}
+		try {
+			pageNo = pageValue(noDesc, args);
+			pageSize = pageValue(sizeDesc, args);
+			if (pageNo != null && null!=pageSize) {
+				if (pageNo>=0 && pageSize>=0){
+					PageHelper.startPage(pageNo, pageSize);
+				}else {
+					PageHelper.startPage(properties.getDefaultPageNo(),properties.getDefaultPageSize());
 				}
-				try {
-					pageNo = pageValue(noDesc, args);
-					pageSize = pageValue(sizeDesc, args);
-                    if (pageNo != null && null!=pageSize) {
-                        if (pageNo>=0 && pageSize>=0){
-                            PageHelper.startPage(pageNo, pageSize);
-                        }else {
-                            PageHelper.startPage(properties.getDefaultPageNo(),properties.getDefaultPageSize());
-                        }
-                    }
-                } catch (Exception e) {
-					// TODO: do noting
-				}
-				return method.invoke(object, args);
-			} else {
-				return method.invoke(object, args);
 			}
 		} catch (Exception e) {
-			// TODO: handle exception
-			return method.invoke(object, args);
-		} finally {
-			PageHelper.clearPage();
+			// TODO: do noting
 		}
 	}
 
