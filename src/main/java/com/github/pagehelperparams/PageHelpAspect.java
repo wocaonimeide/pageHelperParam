@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.ibatis.reflection.MetaObject;
 import org.apache.ibatis.session.Configuration;
@@ -41,7 +42,7 @@ public class PageHelpAspect implements Serializable {
 
 	private Map<Method, ParamDesc[]> paramDescMap = new ConcurrentHashMap<Method, ParamDesc[]>();
 
-	private List<Method> notHasPageInfoMethods=new ArrayList<Method>(20);
+	private List<Method> notHasPageInfoMethods=new CopyOnWriteArrayList<>();
 
 	private Configuration configuration;
 
@@ -78,6 +79,7 @@ public class PageHelpAspect implements Serializable {
 				descs2[1] = sizeDesc;
 				paramDescMap.put(method, descs2);
 			}else {
+				notHasPageInfoMethods.add(method);
 				return;
 			}
 		} else {
